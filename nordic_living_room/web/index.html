@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>北歐小客廳</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ECE8E1;
+    --panel: rgba(250, 248, 244, 0.92);
+    --ink: #2E2C29;
+    --muted: #7A746B;
+    --line: #DDD6CA;
+    --accent: #7F9172;
+    --accent-ink: #FFFFFF;
+    --chip: #F3EFE8;
+    --shadow: 0 10px 30px rgba(60, 50, 35, 0.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1E2128; --panel: rgba(36, 38, 44, 0.92); --ink: #EEE9E0; --muted: #A49D92;
+      --line: #3A3C43; --accent: #D2A64A; --accent-ink: #1E2128; --chip: #2C2F36;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.35); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1E2128; --panel: rgba(36, 38, 44, 0.92); --ink: #EEE9E0; --muted: #A49D92;
+    --line: #3A3C43; --accent: #D2A64A; --accent-ink: #1E2128; --chip: #2C2F36;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.35); color-scheme: dark;
+  }
+  /* the page's own day/night switch overrides the viewer theme */
+  body.day {
+    --bg: #ECE8E1; --panel: rgba(250, 248, 244, 0.92); --ink: #2E2C29; --muted: #7A746B;
+    --line: #DDD6CA; --accent: #7F9172; --accent-ink: #FFFFFF; --chip: #F3EFE8;
+    --shadow: 0 10px 30px rgba(60, 50, 35, 0.12); color-scheme: light;
+  }
+  body.night {
+    color-scheme: dark;
+    --bg: #1E2128;
+    --panel: rgba(36, 38, 44, 0.92);
+    --ink: #EEE9E0;
+    --muted: #A49D92;
+    --line: #3A3C43;
+    --accent: #D2A64A;
+    --accent-ink: #1E2128;
+    --chip: #2C2F36;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Noto Sans TC", system-ui, sans-serif;
+    transition: background .6s ease;
+  }
+  #scene { position: fixed; inset: 0; display: block; outline: none; }
+
+  header {
+    position: fixed; pointer-events: none;
+    top: calc(20px + env(safe-area-inset-top, 0px)); left: calc(24px + env(safe-area-inset-left, 0px));
+  }
+  header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: .08em; }
+  header p { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+
+  .toolbar {
+    position: fixed; display: flex; gap: 8px;
+    top: calc(20px + env(safe-area-inset-top, 0px)); right: calc(24px + env(safe-area-inset-right, 0px));
+  }
+  button {
+    font: inherit; font-size: 13px; color: var(--ink);
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 999px; padding: 8px 14px; cursor: pointer;
+    box-shadow: var(--shadow); backdrop-filter: blur(8px);
+    transition: background .2s, transform .1s;
+  }
+  button:hover { transform: translateY(-1px); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+
+  #info {
+    position: fixed; width: 300px;
+    right: calc(24px + env(safe-area-inset-right, 0px)); top: calc(76px + env(safe-area-inset-top, 0px));
+    background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
+    padding: 20px; box-shadow: var(--shadow); backdrop-filter: blur(10px);
+    transform: translateX(calc(100% + 40px)); transition: transform .35s ease;
+  }
+  #info.show { transform: none; }
+  #info .tag { font-size: 11px; letter-spacing: .12em; color: var(--accent); font-weight: 700; }
+  #info h2 { margin: 6px 0 4px; font-size: 20px; }
+  #info .en { font-size: 12px; color: var(--muted); }
+  #info p { font-size: 14px; line-height: 1.7; margin: 12px 0; }
+  #info dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 13px; margin: 0; }
+  #info dt { color: var(--muted); }
+  #info dd { margin: 0; }
+  #info .close {
+    position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; padding: 0;
+    box-shadow: none; display: grid; place-items: center;
+  }
+  .swatches { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .swatch {
+    width: 28px; height: 28px; border-radius: 50%; padding: 0;
+    border: 2px solid var(--panel); outline: 1px solid var(--line); box-shadow: none;
+  }
+  .swatch.on { outline: 2px solid var(--ink); }
+  .action { margin-top: 14px; }
+
+  #list {
+    position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+    display: flex; gap: 6px; max-width: calc(100vw - 32px); overflow-x: auto;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+    padding: 6px; box-shadow: var(--shadow); backdrop-filter: blur(8px);
+    scrollbar-width: none;
+  }
+  #list::-webkit-scrollbar { display: none; }
+  #list button {
+    white-space: nowrap; box-shadow: none; border: none; background: transparent; padding: 7px 12px;
+  }
+  #list button.on { background: var(--accent); color: var(--accent-ink); }
+
+  #tip {
+    position: fixed; pointer-events: none; font-size: 12px; padding: 4px 10px;
+    background: var(--ink); color: var(--bg); border-radius: 999px;
+    opacity: 0; transform: translate(-50%, -150%); transition: opacity .15s; white-space: nowrap;
+  }
+  #loading {
+    position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg);
+    transition: opacity .6s; z-index: 10;
+  }
+  #loading .bar { width: 180px; height: 3px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 12px; }
+  #loading .fill { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+  #loading.done { opacity: 0; pointer-events: none; }
+
+  @media (max-width: 640px) {
+    header { left: max(16px, env(safe-area-inset-left, 0px)); top: calc(14px + env(safe-area-inset-top, 0px)); }
+    header h1 { font-size: 18px; }
+    header p { display: none; }
+    .toolbar { right: max(16px, env(safe-area-inset-right, 0px)); top: calc(14px + env(safe-area-inset-top, 0px)); }
+    .toolbar button { padding: 7px 11px; }
+    #info {
+      left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
+      top: auto; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); width: auto;
+      transform: translateY(calc(100% + 100px));
+    }
+    #info p { margin: 8px 0; }
+    #list { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+  }
+</style>
+</head>
+<body>
+<canvas id="scene" tabindex="0"></canvas>
+
+<header>
+  <h1>北歐小客廳</h1>
+  <p>拖曳旋轉・滾輪縮放・點選家具看介紹</p>
+</header>
+
+<div class="toolbar">
+  <button id="btnNight" aria-pressed="false">夜晚</button>
+  <button id="btnReset">重設視角</button>
+</div>
+
+<aside id="info" aria-live="polite">
+  <button class="close" id="btnClose" aria-label="關閉">✕</button>
+  <div class="tag" id="infoTag"></div>
+  <h2 id="infoTitle"></h2>
+  <div class="en" id="infoEn"></div>
+  <p id="infoDesc"></p>
+  <dl id="infoSpec"></dl>
+  <div class="swatches" id="infoSwatches"></div>
+  <div class="action" id="infoAction"></div>
+</aside>
+
+<nav id="list" aria-label="家具清單"></nav>
+<div id="tip"></div>
+
+<div id="loading"><div><div>載入模型中…</div><div class="bar"><div class="fill" id="loadFill"></div></div></div></div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+// ---------- Item catalogue (keys = object names exported from Blender) ----------
+const FABRICS = [
+  { name: '淺灰', hex: '#B9B7B1' }, { name: '鼠尾草綠', hex: '#8E9C80' },
+  { name: '芥末黃', hex: '#D2A64A' }, { name: '霧藍', hex: '#8A9DB0' }, { name: '燕麥', hex: '#D8CCB6' },
+];
+const ITEMS = {
+  Sofa: { cat: '家具', zh: '三人座布沙發', en: 'Sofa', desc: '低椅背、細木腳的經典北歐沙發，坐墊可拆洗，適合窩著看電視。', mat: '亞麻混紡布、實心橡木腳', fabric: 'M_Fabric_LightGrey' },
+  Armchair: { cat: '家具', zh: '木框扶手椅', en: 'Armchair', desc: '外露橡木框架搭配鼠尾草綠坐墊，放在窗邊就是閱讀角。', mat: '實心橡木、棉麻布', fabric: 'M_Fabric_Sage' },
+  Coffee_Table: { cat: '家具', zh: '圓形茶几', en: 'Coffee Table', desc: '三腳圓几沒有尖角，動線更順，小空間也不顯擁擠。', mat: '橡木' },
+  TV_Console: { cat: '家具', zh: '電視櫃', en: 'TV Console', desc: '白色烤漆櫃身配橡木門片，收納雜物、讓桌面保持清爽。', mat: '白色烤漆、橡木貼皮' },
+  TV: { cat: '家電', zh: '壁掛電視', en: 'TV', desc: '55 吋壁掛電視，與電視櫃保持適當間距。', mat: '金屬、玻璃' },
+  Side_Table: { cat: '家具', zh: '邊几', en: 'Side Table', desc: '扶手椅旁放咖啡的小邊几，黑色鐵件增加對比。', mat: '橡木、黑色鐵件' },
+  Floor_Lamp: { cat: '燈具', zh: '三腳落地燈', en: 'Floor Lamp', desc: '亞麻燈罩透出暖黃光，夜晚營造放鬆氣氛。', mat: '橡木、黃銅、亞麻', lamp: 'floor' },
+  Pendant_Lamp: { cat: '燈具', zh: '陶瓷吊燈', en: 'Pendant Lamp', desc: '白色陶瓷燈罩向下投光，照亮茶几區。', mat: '陶瓷、黑色電線', lamp: 'pendant' },
+  Wall_Shelf_1: { cat: '收納', zh: '壁架（下層）', en: 'Wall Shelf', desc: '輕巧的層板，放書與小物。', mat: '橡木、黑色鐵件' },
+  Wall_Shelf_2: { cat: '收納', zh: '壁架（上層）', en: 'Wall Shelf', desc: '上層留白，只擺一個陶土花瓶與擺飾。', mat: '橡木、黑色鐵件' },
+  Plant_Fiddle_Leaf: { cat: '植栽', zh: '琴葉榕', en: 'Fiddle Leaf Fig', desc: '北歐居家常見的大型植栽，喜歡明亮的散射光。', mat: '陶土盆' },
+  Plant_Small_Sill: { cat: '植栽', zh: '窗台小盆栽', en: 'Small Plant', desc: '窗台上的小綠意。', mat: '白瓷盆' },
+  Rug: { cat: '織品', zh: '羊毛地毯', en: 'Rug', desc: '米白羊毛地毯界定出客廳區域，也讓腳感更溫暖。', mat: '羊毛' },
+  Pillow_Sage: { cat: '織品', zh: '綠色抱枕', en: 'Cushion', desc: '呼應扶手椅的鼠尾草綠。', mat: '棉麻' },
+  Pillow_Mustard: { cat: '織品', zh: '黃色抱枕', en: 'Cushion', desc: '一點芥末黃，讓淺色空間更有精神。', mat: '絨布' },
+  Throw_Blanket: { cat: '織品', zh: '針織毯', en: 'Throw', desc: '隨手可蓋的米白針織毯。', mat: '針織棉' },
+  Wall_Art_1: { cat: '擺飾', zh: '掛畫・綠', en: 'Wall Art', desc: '簡約色塊畫作，橡木畫框。', mat: '畫布、橡木框' },
+  Wall_Art_2: { cat: '擺飾', zh: '掛畫・陶', en: 'Wall Art', desc: '陶土色畫作，與花瓶相呼應。', mat: '畫布、橡木框' },
+  Wall_Art_3: { cat: '擺飾', zh: '掛畫・沙', en: 'Wall Art', desc: '沙色畫作，讓牆面層次更柔和。', mat: '畫布、橡木框' },
+  Books_Shelf: { cat: '擺飾', zh: '書', en: 'Books', desc: '藍、米、鏽紅三色書背。', mat: '紙' },
+  Books_Console: { cat: '擺飾', zh: '書', en: 'Books', desc: '電視櫃上的幾本書。', mat: '紙' },
+  Vase_Ceramic: { cat: '擺飾', zh: '白瓷花瓶', en: 'Vase', desc: '線條簡單的白瓷花瓶。', mat: '陶瓷' },
+  Vase_Shelf: { cat: '擺飾', zh: '陶土花瓶', en: 'Vase', desc: '手作感陶土花瓶。', mat: '陶土' },
+  Mug: { cat: '擺飾', zh: '馬克杯', en: 'Mug', desc: '邊几上的一杯咖啡。', mat: '陶瓷' },
+  Deco_Ball: { cat: '擺飾', zh: '陶瓷球', en: 'Ornament', desc: '壁架上的小擺飾。', mat: '陶瓷' },
+};
+const LIST_ORDER = ['Sofa', 'Armchair', 'Coffee_Table', 'TV_Console', 'Floor_Lamp', 'Pendant_Lamp', 'Side_Table', 'Wall_Shelf_1', 'Plant_Fiddle_Leaf', 'Rug'];
+
+// ---------- Renderer / scene ----------
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.AgXToneMapping;
+renderer.toneMappingExposure = 1.15;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.55;
+
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 100);
+const HOME = { pos: new THREE.Vector3(6.2, 4.6, 6.6), target: new THREE.Vector3(-0.4, 0.9, -0.2) };
+camera.position.copy(HOME.pos);
+
+const controls = new OrbitControls(camera, canvas);
+controls.target.copy(HOME.target);
+controls.enableDamping = true;
+controls.minDistance = 1.2;
+controls.maxDistance = 22;
+controls.maxPolarAngle = THREE.MathUtils.degToRad(84);
+controls.minAzimuthAngle = THREE.MathUtils.degToRad(-5);
+controls.maxAzimuthAngle = THREE.MathUtils.degToRad(95);
+controls.enablePan = true;
+controls.screenSpacePanning = true;
+
+// Lights (Blender (x,y,z) -> three (x, z, -y))
+const hemi = new THREE.HemisphereLight(0xfaf6ef, 0xb8a27f, 1.1);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff1dc, 3.2);
+sun.position.set(2.2, 4.5, -6);
+sun.target.position.set(0, 0, 0.5);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5, near: 0.5, far: 20 });
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.02;
+scene.add(sun, sun.target);
+const fill = new THREE.DirectionalLight(0xffffff, 0.6);
+fill.position.set(5, 4, 6);
+scene.add(fill);
+
+const floorLight = new THREE.PointLight(0xffc98a, 0, 6, 1.6);
+floorLight.position.set(-2.2, 1.5, 0.45);
+floorLight.castShadow = true;
+floorLight.shadow.mapSize.set(1024, 1024);
+floorLight.shadow.bias = -0.003;
+floorLight.shadow.normalBias = 0.04;
+const pendantLight = new THREE.PointLight(0xffd39c, 0, 5, 1.6);
+pendantLight.position.set(-0.9, 1.88, 0.15);
+scene.add(floorLight, pendantLight);
+const lampState = { floor: false, pendant: false };
+
+// ---------- Load model ----------
+const items = {};          // name -> Object3D
+const pickables = [];
+const loadFill = document.getElementById('loadFill');
+new GLTFLoader().load('nordic_living_room.glb', (gltf) => {
+  const root = gltf.scene;
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    o.castShadow = !/Glass/.test(o.name);
+    o.receiveShadow = true;
+    o.material = o.material.clone();
+    o.userData.baseEmissive = o.material.emissive.clone();
+    o.userData.baseEmissiveIntensity = o.material.emissiveIntensity;
+  });
+  for (const name of Object.keys(ITEMS)) {
+    const obj = root.getObjectByName(name);
+    if (!obj) continue;
+    obj.userData.item = name;
+    items[name] = obj;
+    pickables.push(obj);
+  }
+  scene.add(root);
+  buildList();
+  applyLamps();
+  document.getElementById('loading').classList.add('done');
+}, (e) => { if (e.total) loadFill.style.width = `${(e.loaded / e.total) * 100}%`; },
+(err) => { document.querySelector('#loading div').textContent = '模型載入失敗：' + err.message; });
+
+// ---------- Highlight ----------
+const HOVER = new THREE.Color(0x5a4a30);
+function setGlow(obj, amount) {
+  obj?.traverse((m) => {
+    if (!m.isMesh) return;
+    if (amount > 0) {
+      m.material.emissive.copy(m.userData.baseEmissive).add(HOVER.clone().multiplyScalar(amount));
+      m.material.emissiveIntensity = Math.max(1, m.userData.baseEmissiveIntensity);
+    } else {
+      m.material.emissive.copy(m.userData.baseEmissive);
+      m.material.emissiveIntensity = m.userData.baseEmissiveIntensity;
+    }
+  });
+}
+
+// ---------- Picking ----------
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+const tip = document.getElementById('tip');
+let hovered = null, selected = null, downAt = null;
+
+function pick(clientX, clientY) {
+  pointer.set((clientX / innerWidth) * 2 - 1, -(clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObjects(scene.children, true)[0];
+  let o = hit?.object;
+  while (o && !o.userData.item) o = o.parent;
+  return o || null;
+}
+canvas.addEventListener('pointermove', (e) => {
+  if (e.pointerType !== 'mouse') return;
+  const o = pick(e.clientX, e.clientY);
+  if (o !== hovered) {
+    if (hovered && hovered !== selected) setGlow(hovered, 0);
+    hovered = o;
+    if (o && o !== selected) setGlow(o, 0.6);
+  }
+  canvas.style.cursor = o ? 'pointer' : 'grab';
+  if (o) {
+    tip.textContent = ITEMS[o.userData.item].zh;
+    tip.style.left = e.clientX + 'px'; tip.style.top = e.clientY + 'px'; tip.style.opacity = 1;
+  } else tip.style.opacity = 0;
+});
+canvas.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
+canvas.addEventListener('pointerup', (e) => {
+  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+  const o = pick(e.clientX, e.clientY);
+  o ? select(o.userData.item) : deselect();
+});
+
+// ---------- Selection + camera fly ----------
+const info = document.getElementById('info');
+let fly = null;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function flyTo(pos, target) {
+  fly = { p0: camera.position.clone(), t0: controls.target.clone(), p1: pos, t1: target, t: 0 };
+}
+function select(name, focus = true) {
+  const obj = items[name];
+  if (!obj) return;
+  if (selected && selected !== obj) setGlow(selected, 0);
+  selected = obj;
+  setGlow(obj, 0.9);
+  showInfo(name);
+  document.querySelectorAll('#list button').forEach((b) => b.classList.toggle('on', b.dataset.name === name));
+  if (!focus) return;
+  const box = new THREE.Box3().setFromObject(obj);
+  const center = box.getCenter(new THREE.Vector3());
+  const radius = Math.max(box.getSize(new THREE.Vector3()).length() / 2, 0.35);
+  const dir = camera.position.clone().sub(controls.target).normalize();
+  const dist = THREE.MathUtils.clamp(fitDistance(radius) * 1.6, 1.8, 9);
+  // on phones the info sheet covers the lower half: aim below the object so it sits higher on screen
+  const aim = center.clone();
+  if (innerWidth <= 640) aim.y -= radius * 1.1;
+  flyTo(aim.clone().add(dir.multiplyScalar(dist)), aim);
+}
+// distance at which a sphere of `radius` fits the narrower of the two view angles
+function fitDistance(radius) {
+  const vHalf = THREE.MathUtils.degToRad(camera.fov / 2);
+  const hHalf = Math.atan(Math.tan(vHalf) * camera.aspect);
+  return radius / Math.sin(Math.min(vHalf, hHalf));
+}
+function homeView() {
+  const dir = HOME.pos.clone().sub(HOME.target).normalize();
+  const dist = Math.max(HOME.pos.distanceTo(HOME.target), fitDistance(3.4) * 0.95);
+  return { pos: HOME.target.clone().add(dir.multiplyScalar(dist)), target: HOME.target.clone() };
+}
+function deselect() {
+  if (selected) setGlow(selected, 0);
+  selected = null;
+  info.classList.remove('show');
+  document.querySelectorAll('#list button').forEach((b) => b.classList.remove('on'));
+}
+document.getElementById('btnClose').onclick = deselect;
+document.getElementById('btnReset').onclick = () => { deselect(); const h = homeView(); flyTo(h.pos, h.target); };
+addEventListener('keydown', (e) => { if (e.key === 'Escape') deselect(); });
+
+function showInfo(name) {
+  const it = ITEMS[name], obj = items[name];
+  const size = new THREE.Box3().setFromObject(obj).getSize(new THREE.Vector3());
+  const cm = (v) => Math.round(v * 100);
+  document.getElementById('infoTag').textContent = it.cat;
+  document.getElementById('infoTitle').textContent = it.zh;
+  document.getElementById('infoEn').textContent = it.en;
+  document.getElementById('infoDesc').textContent = it.desc;
+  document.getElementById('infoSpec').innerHTML =
+    `<dt>材質</dt><dd>${it.mat}</dd><dt>尺寸</dt><dd>寬 ${cm(size.x)} × 深 ${cm(size.z)} × 高 ${cm(size.y)} cm</dd>`;
+
+  const sw = document.getElementById('infoSwatches');
+  sw.innerHTML = '';
+  if (it.fabric) {
+    const mats = [];
+    obj.traverse((m) => { if (m.isMesh && m.material.name === it.fabric) mats.push(m.material); });
+    const current = '#' + mats[0]?.color.getHexString(THREE.SRGBColorSpace);
+    for (const f of FABRICS) {
+      const b = document.createElement('button');
+      b.className = 'swatch'; b.title = f.name; b.setAttribute('aria-label', '換成' + f.name);
+      b.style.background = f.hex;
+      if (current.toLowerCase() === f.hex.toLowerCase()) b.classList.add('on');
+      b.onclick = () => {
+        mats.forEach((m) => m.color.set(f.hex));
+        sw.querySelectorAll('.swatch').forEach((s) => s.classList.toggle('on', s === b));
+      };
+      sw.appendChild(b);
+    }
+  }
+  const act = document.getElementById('infoAction');
+  act.innerHTML = '';
+  if (it.lamp) {
+    const b = document.createElement('button');
+    const sync = () => { b.textContent = lampState[it.lamp] ? '關燈' : '開燈'; b.classList.toggle('on', lampState[it.lamp]); };
+    b.onclick = () => { lampState[it.lamp] = !lampState[it.lamp]; applyLamps(); sync(); };
+    sync();
+    act.appendChild(b);
+  }
+  info.classList.add('show');
+}
+
+// ---------- Lamps / day-night ----------
+let night = false;
+function setShadeGlow(name, on) {
+  items[name]?.traverse((m) => {
+    if (!m.isMesh || !/Shade|Ceramic/.test(m.material.name)) return;
+    if (name === 'Pendant_Lamp' && !/Ceramic/.test(m.material.name)) return;
+    m.userData.baseEmissive = on ? new THREE.Color(0xffd9a8) : new THREE.Color(0x000000);
+    m.userData.baseEmissiveIntensity = on ? (night ? 1.2 : 0.4) : 1;
+    setGlow(m, selected && items[name] === selected ? 0.9 : 0);
+  });
+}
+function applyLamps() {
+  floorLight.intensity = lampState.floor ? (night ? 6 : 2.5) : 0;
+  pendantLight.intensity = lampState.pendant ? (night ? 5 : 2) : 0;
+  setShadeGlow('Floor_Lamp', lampState.floor);
+  setShadeGlow('Pendant_Lamp', lampState.pendant);
+}
+const btnNight = document.getElementById('btnNight');
+function setNight(v) {
+  night = v;
+  document.body.classList.toggle('night', night);
+  document.body.classList.toggle('day', !night);
+  btnNight.classList.toggle('on', night);
+  btnNight.setAttribute('aria-pressed', night);
+  btnNight.textContent = night ? '白天' : '夜晚';
+  lampState.floor = lampState.pendant = night;
+  applyLamps();
+  if (selected) showInfo(selected.userData.item);
+}
+btnNight.onclick = () => setNight(!night);
+
+function buildList() {
+  const nav = document.getElementById('list');
+  for (const name of LIST_ORDER) {
+    if (!items[name]) continue;
+    const b = document.createElement('button');
+    b.textContent = ITEMS[name].zh; b.dataset.name = name;
+    b.onclick = () => select(name);
+    nav.appendChild(b);
+  }
+}
+
+// ---------- Loop ----------
+const bgDay = new THREE.Color(0xece8e1), bgNight = new THREE.Color(0x1e2128);
+// start in the viewer's theme: dark theme opens the room at night
+const themeAttr = document.documentElement.dataset.theme;
+setNight(themeAttr === 'dark' || (themeAttr !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches));
+let mix = night ? 1 : 0;
+const clock = new THREE.Clock();
+function tick() {
+  const dt = Math.min(clock.getDelta(), 0.5);
+  // day/night blend
+  mix += ((night ? 1 : 0) - mix) * Math.min(dt * 3, 1);
+  scene.background = bgDay.clone().lerp(bgNight, mix);
+  hemi.intensity = THREE.MathUtils.lerp(1.1, 0.12, mix);
+  sun.intensity = THREE.MathUtils.lerp(3.2, 0.25, mix);
+  sun.color.set(0xfff1dc).lerp(new THREE.Color(0x8fa6d6), mix);
+  fill.intensity = THREE.MathUtils.lerp(0.6, 0.05, mix);
+  scene.environmentIntensity = THREE.MathUtils.lerp(0.55, 0.08, mix);
+
+  if (fly) {
+    fly.t = reduceMotion ? 1 : Math.min(fly.t + dt / 0.9, 1);
+    const k = 1 - Math.pow(1 - fly.t, 3);
+    camera.position.lerpVectors(fly.p0, fly.p1, k);
+    controls.target.lerpVectors(fly.t0, fly.t1, k);
+    if (fly.t === 1) fly = null;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+camera.position.copy(homeView().pos);
+tick();
+controls.addEventListener('start', () => { fly = null; });
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
