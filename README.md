@@ -30,5 +30,6 @@ python -m http.server 8765 --directory nordic_living_room/web
 
 - 拖曳旋轉、滾輪縮放
 - 點家具看介紹，沙發與扶手椅可換布色
+- 點牆面（或清單中的「牆面」）可換壁紙顏色
 - 白天 / 夜晚切換，落地燈與吊燈可個別開關
 - 家具介紹文字與布色在 `index.html` 的 `ITEMS`、`FABRICS` 修改

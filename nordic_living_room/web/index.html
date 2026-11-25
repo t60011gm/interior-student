@@ -105,6 +105,7 @@
     border: 2px solid var(--panel); outline: 1px solid var(--line); box-shadow: none;
   }
   .swatch.on { outline: 2px solid var(--ink); }
+  .swatch-label { flex-basis: 100%; font-size: 12px; color: var(--muted); }
   .action { margin-top: 14px; }
 
   #list {
@@ -195,7 +196,12 @@ const FABRICS = [
   { name: '淺灰', hex: '#B9B7B1' }, { name: '鼠尾草綠', hex: '#8E9C80' },
   { name: '芥末黃', hex: '#D2A64A' }, { name: '霧藍', hex: '#8A9DB0' }, { name: '燕麥', hex: '#D8CCB6' },
 ];
+const WALL_PAINTS = [
+  { name: '米白', hex: '#EEEAE3' }, { name: '霧灰', hex: '#D6D4CF' }, { name: '淡鼠尾草', hex: '#C9D3C0' },
+  { name: '灰藍', hex: '#BCC8D2' }, { name: '奶茶', hex: '#E2D2BE' }, { name: '乾燥玫瑰', hex: '#E3CCC4' },
+];
 const ITEMS = {
+  Walls: { cat: '空間', zh: '牆面', en: 'Walls', desc: '牆面是整個空間的底色。點下方色塊換壁紙顏色，看看不同色調和家具的搭配。', mat: '無光乳膠漆', fabric: 'M_Wall_OffWhite', swatches: WALL_PAINTS, swatchLabel: '壁紙顏色', noGlow: true },
   Sofa: { cat: '家具', zh: '三人座布沙發', en: 'Sofa', desc: '低椅背、細木腳的經典北歐沙發，坐墊可拆洗，適合窩著看電視。', mat: '亞麻混紡布、實心橡木腳', fabric: 'M_Fabric_LightGrey',
     extraFabrics: [{ name: '橘紅', hex: '#C65A3A' }] },
   Armchair: { cat: '家具', zh: '木框扶手椅', en: 'Armchair', desc: '外露橡木框架搭配鼠尾草綠坐墊，放在窗邊就是閱讀角。', mat: '實心橡木、棉麻布', fabric: 'M_Fabric_Sage' },
@@ -223,7 +229,7 @@ const ITEMS = {
   Mug: { cat: '擺飾', zh: '馬克杯', en: 'Mug', desc: '邊几上的一杯咖啡。', mat: '陶瓷' },
   Deco_Ball: { cat: '擺飾', zh: '陶瓷球', en: 'Ornament', desc: '壁架上的小擺飾。', mat: '陶瓷' },
 };
-const LIST_ORDER = ['Sofa', 'Armchair', 'Coffee_Table', 'TV_Console', 'Floor_Lamp', 'Pendant_Lamp', 'Side_Table', 'Wall_Shelf_1', 'Plant_Fiddle_Leaf', 'Rug'];
+const LIST_ORDER = ['Walls', 'Sofa', 'Armchair', 'Coffee_Table', 'TV_Console', 'Floor_Lamp', 'Pendant_Lamp', 'Side_Table', 'Wall_Shelf_1', 'Plant_Fiddle_Leaf', 'Rug'];
 
 // ---------- Renderer / scene ----------
 const canvas = document.getElementById('scene');
@@ -296,6 +302,12 @@ new GLTFLoader().load('nordic_living_room.glb', (gltf) => {
     o.userData.baseEmissive = o.material.emissive.clone();
     o.userData.baseEmissiveIntensity = o.material.emissiveIntensity;
   });
+  // the wall is exported as several pieces around the window; gather them so they pick and recolour as one
+  const walls = new THREE.Group();
+  walls.name = 'Walls';
+  root.children.filter((o) => o.name.startsWith('Wall_') && !o.name.startsWith('Wall_Shelf') && !o.name.startsWith('Wall_Art'))
+    .forEach((o) => walls.add(o));
+  root.add(walls);
   for (const name of Object.keys(ITEMS)) {
     const obj = root.getObjectByName(name);
     if (!obj) continue;
@@ -313,6 +325,7 @@ new GLTFLoader().load('nordic_living_room.glb', (gltf) => {
 // ---------- Highlight ----------
 const HOVER = new THREE.Color(0x5a4a30);
 function setGlow(obj, amount) {
+  if (ITEMS[obj?.userData.item]?.noGlow) amount = 0;
   obj?.traverse((m) => {
     if (!m.isMesh) return;
     if (amount > 0) {
@@ -424,7 +437,13 @@ function showInfo(name) {
     const mats = [];
     obj.traverse((m) => { if (m.isMesh && m.material.name === it.fabric) mats.push(m.material); });
     const current = '#' + mats[0]?.color.getHexString(THREE.SRGBColorSpace);
-    for (const f of [...FABRICS, ...(it.extraFabrics ?? [])]) {
+    if (it.swatchLabel) {
+      const label = document.createElement('div');
+      label.className = 'swatch-label';
+      label.textContent = it.swatchLabel;
+      sw.appendChild(label);
+    }
+    for (const f of it.swatches ?? [...FABRICS, ...(it.extraFabrics ?? [])]) {
       const b = document.createElement('button');
       b.className = 'swatch'; b.title = f.name; b.setAttribute('aria-label', '換成' + f.name);
       b.style.background = f.hex;
