@@ -200,7 +200,12 @@ const WALL_PAINTS = [
   { name: '米白', hex: '#EEEAE3' }, { name: '霧灰', hex: '#D6D4CF' }, { name: '淡鼠尾草', hex: '#C9D3C0' },
   { name: '灰藍', hex: '#BCC8D2' }, { name: '奶茶', hex: '#E2D2BE' }, { name: '乾燥玫瑰', hex: '#E3CCC4' },
 ];
+const CEILING_PAINTS = [
+  { name: '純白', hex: '#F7F6F2' }, { name: '米白', hex: '#EEEAE3' }, { name: '暖灰', hex: '#DCD7CF' },
+  { name: '淺木色', hex: '#D8C2A0' }, { name: '淡鼠尾草', hex: '#D2D9CA' }, { name: '霧藍', hex: '#CBD5DD' },
+];
 const ITEMS = {
+  Ceiling: { cat: '空間', zh: '天花板', en: 'Ceiling', desc: '從房間裡抬頭看天花板。淺色天花板讓空間顯得更高，帶點色調則更有包覆感。', mat: '無光乳膠漆', fabric: 'M_Ceiling_White', swatches: CEILING_PAINTS, swatchLabel: '天花板顏色', noGlow: true, lookUp: true },
   Walls: { cat: '空間', zh: '牆面', en: 'Walls', desc: '牆面是整個空間的底色。點下方色塊換壁紙顏色，看看不同色調和家具的搭配。', mat: '無光乳膠漆', fabric: 'M_Wall_OffWhite', swatches: WALL_PAINTS, swatchLabel: '壁紙顏色', noGlow: true },
   Sofa: { cat: '家具', zh: '三人座布沙發', en: 'Sofa', desc: '低椅背、細木腳的經典北歐沙發，坐墊可拆洗，適合窩著看電視。', mat: '亞麻混紡布、實心橡木腳', fabric: 'M_Fabric_LightGrey',
     extraFabrics: [{ name: '橘紅', hex: '#C65A3A' }] },
@@ -229,7 +234,7 @@ const ITEMS = {
   Mug: { cat: '擺飾', zh: '馬克杯', en: 'Mug', desc: '邊几上的一杯咖啡。', mat: '陶瓷' },
   Deco_Ball: { cat: '擺飾', zh: '陶瓷球', en: 'Ornament', desc: '壁架上的小擺飾。', mat: '陶瓷' },
 };
-const LIST_ORDER = ['Walls', 'Sofa', 'Armchair', 'Coffee_Table', 'TV_Console', 'Floor_Lamp', 'Pendant_Lamp', 'Side_Table', 'Wall_Shelf_1', 'Plant_Fiddle_Leaf', 'Rug'];
+const LIST_ORDER = ['Walls', 'Ceiling','Sofa', 'Armchair', 'Coffee_Table', 'TV_Console', 'Floor_Lamp', 'Pendant_Lamp', 'Side_Table', 'Wall_Shelf_1', 'Plant_Fiddle_Leaf', 'Rug'];
 
 // ---------- Renderer / scene ----------
 const canvas = document.getElementById('scene');
@@ -255,7 +260,9 @@ controls.target.copy(HOME.target);
 controls.enableDamping = true;
 controls.minDistance = 1.2;
 controls.maxDistance = 22;
-controls.maxPolarAngle = THREE.MathUtils.degToRad(84);
+// looking up at the ceiling needs the camera below its target, so that view widens the limit
+const POLAR_NORMAL = THREE.MathUtils.degToRad(84), POLAR_LOOK_UP = THREE.MathUtils.degToRad(150);
+controls.maxPolarAngle = POLAR_NORMAL;
 controls.minAzimuthAngle = THREE.MathUtils.degToRad(-5);
 controls.maxAzimuthAngle = THREE.MathUtils.degToRad(95);
 controls.enablePan = true;
@@ -276,6 +283,10 @@ scene.add(sun, sun.target);
 const fill = new THREE.DirectionalLight(0xffffff, 0.6);
 fill.position.set(5, 4, 6);
 scene.add(fill);
+// light bounced off the floor: the only thing that reaches the underside of the ceiling
+const bounce = new THREE.DirectionalLight(0xfff4e6, 1.4);
+bounce.position.set(0.5, -4, 0.5);
+scene.add(bounce);
 
 const floorLight = new THREE.PointLight(0xffc98a, 0, 6, 1.6);
 floorLight.position.set(-2.2, 1.5, 0.45);
@@ -296,7 +307,8 @@ new GLTFLoader().load('nordic_living_room.glb', (gltf) => {
   const root = gltf.scene;
   root.traverse((o) => {
     if (!o.isMesh) return;
-    o.castShadow = !/Glass/.test(o.name);
+    // the ceiling is single-sided (invisible from above) and must not shade the open-top room
+    o.castShadow = !/Glass|Ceiling/.test(o.name);
     o.receiveShadow = true;
     o.material = o.material.clone();
     o.userData.baseEmissive = o.material.emissive.clone();
@@ -389,6 +401,12 @@ function select(name, focus = true) {
   showInfo(name);
   document.querySelectorAll('#list button').forEach((b) => b.classList.toggle('on', b.dataset.name === name));
   if (!focus) return;
+  if (ITEMS[name].lookUp) {
+    // stand inside the room near the open corner and look up into the ceiling
+    controls.maxPolarAngle = POLAR_LOOK_UP;
+    flyTo(new THREE.Vector3(1.9, 0.9, 1.7), new THREE.Vector3(-0.6, 2.5, -0.6));
+    return;
+  }
   const box = new THREE.Box3().setFromObject(obj);
   const center = box.getCenter(new THREE.Vector3());
   const radius = Math.max(box.getSize(new THREE.Vector3()).length() / 2, 0.35);
@@ -411,6 +429,7 @@ function homeView() {
   return { pos: HOME.target.clone().add(dir.multiplyScalar(dist)), target: HOME.target.clone() };
 }
 function deselect() {
+  if (selected && ITEMS[selected.userData.item].lookUp) { const h = homeView(); flyTo(h.pos, h.target); }
   if (selected) setGlow(selected, 0);
   selected = null;
   info.classList.remove('show');
@@ -525,6 +544,7 @@ function tick() {
   sun.intensity = THREE.MathUtils.lerp(3.2, 0.25, mix);
   sun.color.set(0xfff1dc).lerp(new THREE.Color(0x8fa6d6), mix);
   fill.intensity = THREE.MathUtils.lerp(0.6, 0.05, mix);
+  bounce.intensity = THREE.MathUtils.lerp(1.4, 0.15, mix);
   scene.environmentIntensity = THREE.MathUtils.lerp(0.55, 0.08, mix);
 
   if (fly) {
@@ -532,7 +552,11 @@ function tick() {
     const k = 1 - Math.pow(1 - fly.t, 3);
     camera.position.lerpVectors(fly.p0, fly.p1, k);
     controls.target.lerpVectors(fly.t0, fly.t1, k);
-    if (fly.t === 1) fly = null;
+    if (fly.t === 1) {
+      fly = null;
+      // tighten the limit only after leaving the ceiling view, so the clamp never jerks the camera mid-flight
+      if (!(selected && ITEMS[selected.userData.item].lookUp)) controls.maxPolarAngle = POLAR_NORMAL;
+    }
   }
   controls.update();
   renderer.render(scene, camera);
@@ -540,7 +564,10 @@ function tick() {
 }
 camera.position.copy(homeView().pos);
 tick();
-controls.addEventListener('start', () => { fly = null; });
+controls.addEventListener('start', () => {
+  fly = null;
+  if (!(selected && ITEMS[selected.userData.item].lookUp)) controls.maxPolarAngle = POLAR_NORMAL;
+});
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
