@@ -196,7 +196,8 @@ const FABRICS = [
   { name: '芥末黃', hex: '#D2A64A' }, { name: '霧藍', hex: '#8A9DB0' }, { name: '燕麥', hex: '#D8CCB6' },
 ];
 const ITEMS = {
-  Sofa: { cat: '家具', zh: '三人座布沙發', en: 'Sofa', desc: '低椅背、細木腳的經典北歐沙發，坐墊可拆洗，適合窩著看電視。', mat: '亞麻混紡布、實心橡木腳', fabric: 'M_Fabric_LightGrey' },
+  Sofa: { cat: '家具', zh: '三人座布沙發', en: 'Sofa', desc: '低椅背、細木腳的經典北歐沙發，坐墊可拆洗，適合窩著看電視。', mat: '亞麻混紡布、實心橡木腳', fabric: 'M_Fabric_LightGrey',
+    extraFabrics: [{ name: '橘紅', hex: '#C65A3A' }] },
   Armchair: { cat: '家具', zh: '木框扶手椅', en: 'Armchair', desc: '外露橡木框架搭配鼠尾草綠坐墊，放在窗邊就是閱讀角。', mat: '實心橡木、棉麻布', fabric: 'M_Fabric_Sage' },
   Coffee_Table: { cat: '家具', zh: '圓形茶几', en: 'Coffee Table', desc: '三腳圓几沒有尖角，動線更順，小空間也不顯擁擠。', mat: '橡木' },
   TV_Console: { cat: '家具', zh: '電視櫃', en: 'TV Console', desc: '白色烤漆櫃身配橡木門片，收納雜物、讓桌面保持清爽。', mat: '白色烤漆、橡木貼皮' },
@@ -423,7 +424,7 @@ function showInfo(name) {
     const mats = [];
     obj.traverse((m) => { if (m.isMesh && m.material.name === it.fabric) mats.push(m.material); });
     const current = '#' + mats[0]?.color.getHexString(THREE.SRGBColorSpace);
-    for (const f of FABRICS) {
+    for (const f of [...FABRICS, ...(it.extraFabrics ?? [])]) {
       const b = document.createElement('button');
       b.className = 'swatch'; b.title = f.name; b.setAttribute('aria-label', '換成' + f.name);
       b.style.background = f.hex;
